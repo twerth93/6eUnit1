@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en"> <!-- Language set to English -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kim's Game Colors</title> <!-- Title in English -->
+    <!-- Loading Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Inter font definition */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Light background color */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Minimum height to center content */
+            margin: 0;
+            padding: 20px; /* Global padding */
+            box-sizing: border-box;
+        }
+
+        /* Game specific styles */
+        .color-spot {
+            width: 120px; /* Base size */
+            height: 120px;
+            border-radius: 50%; /* Round spots */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: opacity 0.5s ease-in-out, transform 0.2s ease-in-out;
+            cursor: pointer; /* Indicates interactivity */
+            border: 4px solid transparent; /* Transparent border by default */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* Removed font-size, font-weight, color, text-shadow as numbers are removed */
+        }
+
+        /* Responsiveness for color spot sizes */
+        @media (min-width: 640px) { /* sm */
+            .color-spot {
+                width: 140px;
+                height: 140px;
+                /* Removed font-size as numbers are removed */
+            }
+        }
+        @media (min-width: 768px) { /* md */
+            .color-spot {
+                width: 160px;
+                height: 160px;
+                /* Removed font-size as numbers are removed */
+            }
+        }
+        @media (min-width: 1024px) { /* lg */
+            .color-spot {
+                width: 180px;
+                height: 180px;
+                /* Removed font-size as numbers are removed */
+            }
+        }
+
+        /* Blinking animation for reappeared color */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .blinking {
+            animation: blink 0.8s ease-in-out infinite;
+        }
+
+        /* Animation for game container appearance */
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .animate-in {
+            animation: fadeInScale 0.6s ease-out forwards;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container" class="relative w-full max-w-2xl bg-white p-6 md:p-8 rounded-2xl shadow-xl flex flex-col items-center animate-in">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-center text-gray-800 mb-6">Kim's Game: Colors</h1> <!-- Title in English -->
+        <div id="instructions" class="text-lg md:text-xl font-semibold text-gray-700 mb-8 text-center px-4">
+            <!-- Game instructions will be displayed here -->
+        </div>
+        <!-- Adjusted grid layout for more colors. Flexbox with wrap might be more adaptive too. -->
+        <div id="color-spots-container" class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-6 md:gap-8 justify-items-center w-full">
+            <!-- Color spots will be inserted here by JavaScript -->
+        </div>
+
+        <button id="next-button" class="mt-10 px-8 py-4 bg-blue-600 text-white font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300 active:scale-95 flex items-center justify-center text-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 mr-2">
+                <path fill-rule="evenodd" d="M16.28 11.47a.75.75 0 010 1.06l-7.5 7.5a.75.75 0 01-1.06-1.06L14.69 12 7.72 5.03a.75.75 0 011.06-1.06l7.5 7.5z" clip-rule="evenodd" />
+            </svg>
+            Start Game
+        </button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const colorSpotsContainer = document.getElementById('color-spots-container');
+            const nextButton = document.getElementById('next-button');
+            const instructionsElement = document.getElementById('instructions');
+
+            // Original definition of colors for the game (source of truth)
+            const originalColors = [
+                { id: 'spot1', hex: '#FF0000', name: 'Red' },
+                { id: 'spot2', hex: '#FFA500', name: 'Orange' },
+                { id: 'spot3', hex: '#ADD8E6', name: 'Light Blue' },
+                { id: 'spot4', hex: '#00008B', name: 'Dark Blue' },
+                { id: 'spot5', hex: '#FFFF00', name: 'Yellow' },
+                { id: 'spot6', hex: '#808080', name: 'Grey' },
+                { id: 'spot7', hex: '#000000', name: 'Black' },
+                { id: 'spot8', hex: '#FFFFFF', name: 'White' },
+                { id: 'spot9', hex: '#FFC0CB', name: 'Pink' },
+                { id: 'spot10', hex: '#800080', name: 'Purple' },
+                { id: 'spot11', hex: '#A52A2A', name: 'Brown' },
+                { id: 'spot12', hex: '#008000', name: 'Green' }
+            ];
+
+            // Game state variables
+            let gamePhase = 0; // 0: Start screen/All colors visible, 1: A color is missing, 2: The missing color reappeared (blinking)
+            let currentMissingColorOriginalIndex = -1; // Original index of the color that is currently missing or just revealed
+            let roundCounter = 0; // Counts the number of completed rounds in the current game session
+            let shuffledMissingSequenceIndices = []; // Shuffled original indices to determine the order of missing colors
+            let currentDisplayedSpots = new Map(); // Stores references to the DOM elements of the current color spots, keyed by their original color ID
+
+            /**
+             * Updates the instruction text to guide the user.
+             * @param {string} text The instruction text.
+             */
+            function updateInstructions(text) {
+                instructionsElement.textContent = text;
+            }
+
+            /**
+             * Shuffles an array randomly (Fisher-Yates shuffle algorithm).
+             * @param {Array} array The array to shuffle.
+             */
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+
+            /**
+             * Renders a given list of color objects onto the display, clearing previous ones.
+             * Populates the currentDisplayedSpots map.
+             * @param {Array} colorsToDisplay An array of color objects (from originalColors or a subset).
+             */
+            function renderColorSpots(colorsToDisplay) {
+                colorSpotsContainer.innerHTML = ''; // Clear previous spots
+                currentDisplayedSpots.clear(); // Clear previous references
+
+                // Create and append the new color spots based on the shuffled display order
+                colorsToDisplay.forEach((color) => { // Removed index as it's not used for textContent
+                    const colorDiv = document.createElement('div');
+                    colorDiv.className = 'color-spot';
+                    colorDiv.style.backgroundColor = color.hex;
+                    // Removed colorDiv.textContent = index + 1; as per user request
+                    colorDiv.setAttribute('data-original-color-id', color.id); // Store original ID for lookup
+
+                    // Removed text color adjustment as numbers are no longer displayed
+
+                    colorSpotsContainer.appendChild(colorDiv);
+                    // Store reference to the created DOM element using its original color ID
+                    currentDisplayedSpots.set(color.id, colorDiv);
+                });
+            }
+
+            /**
+             * Initializes the game to its starting state: all colors visible, counters reset, positions randomized.
+             */
+            function initializeGame() {
+                gamePhase = 0;
+                roundCounter = 0;
+                currentMissingColorOriginalIndex = -1;
+                
+                // Prepare the sequence of which color will disappear (using original indices)
+                shuffledMissingSequenceIndices = Array.from({ length: originalColors.length }, (_, i) => i);
+                shuffleArray(shuffledMissingSequenceIndices);
+
+                // Render all colors in a shuffled order at the start
+                let shuffledInitialDisplayColors = [...originalColors];
+                shuffleArray(shuffledInitialDisplayColors);
+                renderColorSpots(shuffledInitialDisplayColors);
+
+                nextButton.textContent = "Start Game"; // Initial button text
+                updateInstructions("Click 'Start Game' to begin. Try to remember where the colors are!");
+            }
+
+            /**
+             * Handles the "Next" button click, advancing the game through its phases.
+             */
+            function handleNextClick() {
+                // Get the DOM element of the color that needs to be manipulated
+                // We use the original ID to find the correct spot, regardless of its shuffled position
+                const targetColorId = originalColors[currentMissingColorOriginalIndex]?.id;
+                const targetSpot = targetColorId ? currentDisplayedSpots.get(targetColorId) : null;
+
+                if (gamePhase === 0) { // Phase 0: Game start / All colors visible
+                    // Hide a color for the first round
+                    currentMissingColorOriginalIndex = shuffledMissingSequenceIndices[roundCounter];
+                    const firstMissingSpot = currentDisplayedSpots.get(originalColors[currentMissingColorOriginalIndex].id);
+                    if (firstMissingSpot) {
+                        firstMissingSpot.style.opacity = '0'; // Make the spot invisible
+                        // Removed firstMissingSpot.textContent = ''; as per user request
+                    }
+                    gamePhase = 1; // Transition to phase where a color is missing
+                    updateInstructions("A color has disappeared! Which one? Click the arrow to reveal it.");
+                    nextButton.textContent = "Reveal Color";
+                } else if (gamePhase === 1) { // Phase 1: A color is missing, reveal it
+                    if (targetSpot) {
+                        targetSpot.style.opacity = '1';
+                        targetSpot.classList.add('blinking'); // Add blinking class
+                        // Removed targetSpot.textContent = displayedIndex + 1; as per user request
+
+                        // Removed text color adjustment for revealed spot as numbers are no longer displayed
+                    }
+
+                    gamePhase = 2; // Transition to phase where the color is revealed (blinking)
+                    updateInstructions("There it is! Click the arrow for the next challenge.");
+                    nextButton.textContent = "Next Color";
+                } else if (gamePhase === 2) { // Phase 2: Color just revealed, prepare for next disappearance
+                    // Stop blinking of the previous color
+                    if (targetSpot) {
+                        targetSpot.classList.remove('blinking');
+                        targetSpot.style.opacity = '1'; // Ensure it's fully visible before re-rendering
+                    }
+
+                    roundCounter++; // Increment round counter
+
+                    if (roundCounter < originalColors.length) {
+                        // More colors left to disappear in this session
+                        currentMissingColorOriginalIndex = shuffledMissingSequenceIndices[roundCounter]; // Choose the next color to hide
+
+                        // Create a new array of colors to display for the next round (all original colors)
+                        // This ensures all spots are re-rendered, including the one that was just revealed
+                        let colorsForNextDisplay = [...originalColors];
+                        shuffleArray(colorsForNextDisplay); // Shuffle all colors for new positions
+
+                        renderColorSpots(colorsForNextDisplay); // Re-render all colors in new shuffled positions
+
+                        // Now, hide the NEW missing spot based on its original ID
+                        const nextMissingSpot = currentDisplayedSpots.get(originalColors[currentMissingColorOriginalIndex].id);
+                        if (nextMissingSpot) {
+                            nextMissingSpot.style.opacity = '0'; // Hide the new spot
+                            // Removed nextMissingSpot.textContent = ''; as per user request
+                        }
+                        gamePhase = 1; // Return to phase where a color is missing
+                        updateInstructions("A new color has disappeared. Which one this time?");
+                        nextButton.textContent = "Reveal Color";
+                    } else {
+                        // End of game: all colors have been missing once
+                        updateInstructions("Congratulations! You've completed all rounds. Click 'Play Again' for a new game.");
+                        nextButton.textContent = "Play Again";
+                        // Reset the game to allow a new game, which will also randomize positions
+                        initializeGame();
+                    }
+                }
+            }
+
+            // Add event listener to the "Next" button
+            nextButton.addEventListener('click', handleNextClick);
+
+            // Initialize the game on page load
+            initializeGame();
+        });
+    </script>
+</body>
+</html>
