@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apprenez les Couleurs en Anglais</title>
+    <!-- Chargement de Tailwind CSS pour le style -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Définition de la police Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Couleur de fond légère */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Hauteur minimale pour centrer le contenu */
+            margin: 0;
+            padding: 20px; /* Ajout d'un peu de padding global */
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="container bg-white p-6 md:p-8 lg:p-10 rounded-xl shadow-lg w-full max-w-4xl border border-gray-200 flex flex-col items-center">
+        <!-- Le titre a été supprimé comme demandé -->
+
+        <div id="color-palette" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 justify-items-center">
+            <!-- Les blocs de couleurs seront insérés ici par JavaScript -->
+        </div>
+
+        <!-- Section pour les nouvelles fonctionnalités LLM -->
+        <button id="generate-sentence-btn" class="mt-8 px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-300 active:scale-95">
+            ✨ Générer une phrase sur une couleur
+        </button>
+
+        <div id="sentence-output" class="mt-6 p-4 bg-purple-50 text-purple-900 rounded-lg shadow-md text-center text-lg font-semibold w-full hidden transition-opacity duration-500 opacity-0">
+            <!-- La phrase générée par l'IA sera affichée ici -->
+        </div>
+
+        <div id="message-box" class="mt-8 p-4 bg-blue-100 text-blue-800 rounded-lg shadow-md text-center text-lg hidden">
+            <!-- Message box for user feedback, e.g., when speech is not supported -->
+        </div>
+
+        <div id="loading-indicator" class="mt-4 hidden">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+            <p class="text-gray-600 mt-2">Génération...</p>
+        </div>
+    </div>
+
+    <script>
+        // Animations pour le titre (via classes Tailwind animées) - Les styles sont conservés au cas où
+        // des animations spécifiques aux éléments existeraient déjà ou seraient ajoutées plus tard
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @keyframes fadeInDown {
+                from { opacity: 0; transform: translateY(-20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .animate-fade-in-down {
+                animation: fadeInDown 1s ease-out forwards;
+            }
+        `;
+        document.head.appendChild(style);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const colorPalette = document.getElementById('color-palette');
+            const messageBox = document.getElementById('message-box');
+            const generateSentenceBtn = document.getElementById('generate-sentence-btn');
+            const sentenceOutput = document.getElementById('sentence-output');
+            const loadingIndicator = document.getElementById('loading-indicator');
+
+
+            // Tableau des couleurs avec leurs noms en anglais et leurs codes hexadécimaux
+            const colors = [
+                { name: 'Red', hex: '#FF0000' },
+                { name: 'Orange', hex: '#FFA500' },
+                { name: 'Light Blue', hex: '#ADD8E6' }, // Bleu clair
+                { name: 'Dark Blue', hex: '#00008B' },  // Bleu foncé
+                { name: 'Yellow', hex: '#FFFF00' },
+                { name: 'Grey', hex: '#808080' },
+                { name: 'Black', hex: '#000000' },
+                { name: 'White', hex: '#FFFFFF', textColor: '#333333' }, // Blanc avec texte gris foncé pour la visibilité
+                { name: 'Pink', hex: '#FFC0CB' },
+                { name: 'Purple', hex: '#800080' },
+                { name: 'Brown', hex: '#A52A2A' },
+                { name: 'Green', hex: '#008000' }
+            ];
+
+            // Fonction pour afficher un message à l'utilisateur
+            function showMessage(message, type = 'info') {
+                messageBox.textContent = message;
+                messageBox.className = `mt-8 p-4 rounded-lg shadow-md text-center text-lg`;
+                if (type === 'error') {
+                    messageBox.classList.add('bg-red-100', 'text-red-800');
+                } else {
+                    messageBox.classList.add('bg-blue-100', 'text-blue-800');
+                }
+                messageBox.classList.remove('hidden');
+            }
+
+            // Fonction pour parler un texte
+            function speakText(text, lang = 'en-US') {
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = lang;
+                    utterance.pitch = 1;
+                    utterance.rate = 1;
+                    window.speechSynthesis.speak(utterance);
+                } else {
+                    console.warn("SpeechSynthesis API not supported.");
+                }
+            }
+
+            // Vérifie si l'API SpeechSynthesis est disponible
+            if ('speechSynthesis' in window) {
+                // Création des blocs de couleurs et ajout au DOM
+                colors.forEach((color, index) => {
+                    const colorDiv = document.createElement('div');
+                    colorDiv.className = `
+                        w-32 h-32 md:w-36 md:h-36 lg:w-40 lg:h-40
+                        rounded-2xl shadow-md flex items-center justify-center
+                        cursor-pointer transform transition-all duration-300
+                        hover:scale-105 hover:shadow-xl active:scale-95
+                        border-4 border-transparent hover:border-blue-400
+                        relative overflow-hidden
+                    `;
+                    colorDiv.style.backgroundColor = color.hex;
+                    colorDiv.setAttribute('data-color-name', color.name);
+
+                    // Ajout du numéro au centre de chaque case
+                    const numberSpan = document.createElement('span');
+                    numberSpan.textContent = index + 1; // Les numéros commencent à partir de 1
+                    numberSpan.className = `
+                        absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+                        font-extrabold text-4xl md:text-5xl lg:text-6xl
+                        ${color.name === 'White' ? 'text-gray-800' : 'text-white'}
+                        pointer-events-none /* Empêche le numéro d'intercepter les clics */
+                        drop-shadow-lg /* Ajoute une ombre portée pour la visibilité */
+                    `;
+                    colorDiv.appendChild(numberSpan);
+
+                    // Écouteur d'événements pour le clic
+                    colorDiv.addEventListener('click', () => {
+                        const colorName = colorDiv.getAttribute('data-color-name');
+                        speakText(colorName, 'en-US');
+
+                        // Afficher un petit feedback visuel temporaire
+                        colorDiv.classList.add('ring-4', 'ring-blue-500', 'ring-opacity-75');
+                        setTimeout(() => {
+                            colorDiv.classList.remove('ring-4', 'ring-blue-500', 'ring-opacity-75');
+                        }, 500);
+                    });
+                    colorPalette.appendChild(colorDiv);
+                });
+            } else {
+                // Message d'erreur si l'API n'est pas supportée
+                showMessage("Désolé, votre navigateur ne supporte pas l'API SpeechSynthesis. Vous ne pourrez pas entendre les noms des couleurs.", 'error');
+            }
+
+            // Fonctionnalité LLM : Générer une phrase sur une couleur
+            generateSentenceBtn.addEventListener('click', async () => {
+                loadingIndicator.classList.remove('hidden');
+                sentenceOutput.classList.add('hidden', 'opacity-0'); // Hide and reset opacity
+
+                // Sélectionne une couleur aléatoire
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                const colorName = randomColor.name;
+
+                // Prompt pour l'IA
+                const prompt = `Generate a short, simple, and creative sentence in English about the color ${colorName}. For example, if the color is 'Red', a sentence could be 'The fiery red sunset painted the sky.' Do not include any introductory or concluding phrases, just the sentence.`;
+
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+                const apiKey = "" // If you want to use models other than gemini-2.0-flash or imagen-3.0-generate-002, provide an API key here. Otherwise, leave this as-is.
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const generatedText = result.candidates[0].content.parts[0].text;
+                        sentenceOutput.textContent = generatedText;
+                        sentenceOutput.classList.remove('hidden');
+                        setTimeout(() => sentenceOutput.classList.remove('opacity-0'), 10); // Fade in
+                        speakText(generatedText, 'en-US'); // Lire la phrase
+                    } else {
+                        showMessage("Désolé, je n'ai pas pu générer de phrase. Veuillez réessayer.", 'error');
+                        sentenceOutput.classList.add('hidden');
+                    }
+                } catch (error) {
+                    console.error("Error calling Gemini API:", error);
+                    showMessage("Une erreur est survenue lors de la communication avec l'IA. Veuillez vérifier votre connexion ou réessayer.", 'error');
+                    sentenceOutput.classList.add('hidden');
+                } finally {
+                    loadingIndicator.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
