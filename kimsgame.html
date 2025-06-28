@@ -14,9 +14,9 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh; /* Minimum height to center content */
+            /* Removed min-height: 100vh; to allow content to adapt to iframe height */
             margin: 0;
-            padding: 20px; /* Global padding */
+            padding: 10px; /* Reduced global padding slightly for more space */
             box-sizing: border-box;
         }
 
@@ -154,15 +154,11 @@
                 currentDisplayedSpots.clear(); // Clear previous references
 
                 // Create and append the new color spots based on the shuffled display order
-                colorsToDisplay.forEach((color) => { // Removed index as it's not used for textContent
+                colorsToDisplay.forEach((color) => {
                     const colorDiv = document.createElement('div');
                     colorDiv.className = 'color-spot';
                     colorDiv.style.backgroundColor = color.hex;
-                    // Removed colorDiv.textContent = index + 1; as per user request
                     colorDiv.setAttribute('data-original-color-id', color.id); // Store original ID for lookup
-
-                    // Removed text color adjustment as numbers are no longer displayed
-
                     colorSpotsContainer.appendChild(colorDiv);
                     // Store reference to the created DOM element using its original color ID
                     currentDisplayedSpots.set(color.id, colorDiv);
@@ -205,7 +201,6 @@
                     const firstMissingSpot = currentDisplayedSpots.get(originalColors[currentMissingColorOriginalIndex].id);
                     if (firstMissingSpot) {
                         firstMissingSpot.style.opacity = '0'; // Make the spot invisible
-                        // Removed firstMissingSpot.textContent = ''; as per user request
                     }
                     gamePhase = 1; // Transition to phase where a color is missing
                     updateInstructions("A color has disappeared! Which one? Click the arrow to reveal it.");
@@ -214,9 +209,6 @@
                     if (targetSpot) {
                         targetSpot.style.opacity = '1';
                         targetSpot.classList.add('blinking'); // Add blinking class
-                        // Removed targetSpot.textContent = displayedIndex + 1; as per user request
-
-                        // Removed text color adjustment for revealed spot as numbers are no longer displayed
                     }
 
                     gamePhase = 2; // Transition to phase where the color is revealed (blinking)
@@ -246,7 +238,6 @@
                         const nextMissingSpot = currentDisplayedSpots.get(originalColors[currentMissingColorOriginalIndex].id);
                         if (nextMissingSpot) {
                             nextMissingSpot.style.opacity = '0'; // Hide the new spot
-                            // Removed nextMissingSpot.textContent = ''; as per user request
                         }
                         gamePhase = 1; // Return to phase where a color is missing
                         updateInstructions("A new color has disappeared. Which one this time?");
