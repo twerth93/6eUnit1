@@ -32,7 +32,6 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            /* Removed font-size, font-weight, color, text-shadow as numbers are removed */
         }
 
         /* Responsiveness for color spot sizes */
@@ -40,21 +39,18 @@
             .color-spot {
                 width: 140px;
                 height: 140px;
-                /* Removed font-size as numbers are removed */
             }
         }
         @media (min-width: 768px) { /* md */
             .color-spot {
                 width: 160px;
                 height: 160px;
-                /* Removed font-size as numbers are removed */
             }
         }
         @media (min-width: 1024px) { /* lg */
             .color-spot {
                 width: 180px;
                 height: 180px;
-                /* Removed font-size as numbers are removed */
             }
         }
 
@@ -88,19 +84,29 @@
             <!-- Color spots will be inserted here by JavaScript -->
         </div>
 
-        <button id="next-button" class="mt-10 px-8 py-4 bg-blue-600 text-white font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300 active:scale-95 flex items-center justify-center text-lg">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 mr-2">
-                <path fill-rule="evenodd" d="M16.28 11.47a.75.75 0 010 1.06l-7.5 7.5a.75.75 0 01-1.06-1.06L14.69 12 7.72 5.03a.75.75 0 011.06-1.06l7.5 7.5z" clip-rule="evenodd" />
-            </svg>
-            Start Game
-        </button>
+        <div class="flex flex-col sm:flex-row gap-4 mt-10">
+            <button id="fullscreen-button" class="px-6 py-3 bg-gray-600 text-white font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-gray-300 active:scale-95 flex items-center justify-center text-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 mr-2">
+                    <path d="M7.5 7.5a3 3 0 10-3 3h3V7.5zM12.75 12.75a3 3 0 10-3-3v3h3zM7.5 16.5a3 3 0 10-3 3h3V16.5zM16.5 7.5a3 3 0 103 3h-3V7.5z" />
+                </svg>
+                Fullscreen
+            </button>
+            <button id="next-button" class="px-8 py-4 bg-blue-600 text-white font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300 active:scale-95 flex items-center justify-center text-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 mr-2">
+                    <path fill-rule="evenodd" d="M16.28 11.47a.75.75 0 010 1.06l-7.5 7.5a.75.75 0 01-1.06-1.06L14.69 12 7.72 5.03a.75.75 0 011.06-1.06l7.5 7.5z" clip-rule="evenodd" />
+                </svg>
+                Start Game
+            </button>
+        </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const colorSpotsContainer = document.getElementById('color-spots-container');
             const nextButton = document.getElementById('next-button');
+            const fullscreenButton = document.getElementById('fullscreen-button'); // Get fullscreen button
             const instructionsElement = document.getElementById('instructions');
+            const gameContainer = document.getElementById('game-container'); // Get game container for fullscreen
 
             // Original definition of colors for the game (source of truth)
             const originalColors = [
@@ -251,6 +257,20 @@
                     }
                 }
             }
+
+            // Fullscreen functionality
+            fullscreenButton.addEventListener('click', () => {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else {
+                    gameContainer.requestFullscreen().catch(err => {
+                        console.error(`Error attempting to enable fullscreen: ${err.message} (${err.name})`);
+                        // Provide user feedback if fullscreen fails (e.g., due to iframe restrictions)
+                        instructionsElement.textContent = "Fullscreen not supported or allowed by your browser/device in this context.";
+                    });
+                }
+            });
+
 
             // Add event listener to the "Next" button
             nextButton.addEventListener('click', handleNextClick);
